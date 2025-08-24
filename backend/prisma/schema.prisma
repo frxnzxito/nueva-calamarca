@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Rol {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  usuarios  Usuario[]
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  ci        String   @unique
+  apellidos String
+  nombres   String
+  foto      String?
+  rolId     Int
+  rol       Rol      @relation(fields: [rolId], references: [id])
+  asistencias Asistencia[]
+  produccionesPerforista Produccion[] @relation("Perforista")
+  produccionesEncargado Produccion[] @relation("Encargado")
+}
+
+model Turno {
+  id      Int      @id @default(autoincrement())
+  nombre  String   @unique
+  asistencias Asistencia[]
+  producciones Produccion[]
+}
+
+model PuestoTrabajo {
+  id      Int      @id @default(autoincrement())
+  nombre  String   @unique
+  asistencias Asistencia[]
+}
+
+model Asistencia {
+  id              Int      @id @default(autoincrement())
+  fecha           DateTime
+  usuarioId       Int
+  turnoId         Int
+  puestoTrabajoId Int
+  usuario         Usuario  @relation(fields: [usuarioId], references: [id])
+  turno           Turno    @relation(fields: [turnoId], references: [id])
+  puestoTrabajo   PuestoTrabajo @relation(fields: [puestoTrabajoId], references: [id])
+}
+
+model Mina {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  producciones Produccion[]
+}
+
+model Produccion {
+  id              Int      @id @default(autoincrement())
+  fecha           DateTime
+  turnoId         Int
+  minaId          Int
+  perforistaId    Int
+  encargadoId     Int
+  carros          Int
+  sacos           Int
+  topesPerforados Int
+  turno           Turno    @relation(fields: [turnoId], references: [id])
+  mina            Mina     @relation(fields: [minaId], references: [id])
+  perforista      Usuario  @relation("Perforista", fields: [perforistaId], references: [id])
+  encargado       Usuario  @relation("Encargado", fields: [encargadoId], references: [id])
+}
