@@ -13,6 +13,13 @@ model Rol {
   usuarios  Usuario[]
 }
 
+model Mina {
+  id            Int      @id @default(autoincrement())
+  nombre        String
+  encargado     Usuario[] // Relación inversa
+  producciones  Produccion[]
+}
+
 model Usuario {
   id            Int      @id @default(autoincrement())
   ci            String   @unique
@@ -20,11 +27,34 @@ model Usuario {
   nombres       String
   foto          String?
   rolId         Int
+  minaId        Int?
   passwordHash  String? @default("")
+
   rol       Rol      @relation(fields: [rolId], references: [id])
+  mina      Mina?    @relation(fields: [minaId], references: [id])
   asistencias Asistencia[]
   produccionesPerforista Produccion[] @relation("Perforista")
   produccionesEncargado Produccion[] @relation("Encargado")
+  produccionesAyudante  Produccion[] @relation("Ayudante")
+}
+
+model Produccion {
+  id               Int      @id @default(autoincrement())
+  fecha            DateTime
+  minaId           Int
+  turnoId          Int
+  encargadoId      Int
+  perforistaId     Int
+  ayudanteId       Int
+  topesPerforados  Int
+  carrosSacados    Int
+  sacosSacados     Int
+
+  mina             Mina     @relation(fields: [minaId], references: [id])
+  encargado        Usuario  @relation("Encargado", fields: [encargadoId], references: [id])
+  perforista       Usuario  @relation("Perforista", fields: [perforistaId], references: [id])
+  ayudante         Usuario  @relation("Ayudante", fields: [ayudanteId], references: [id])
+  turno            Turno    @relation(fields: [turnoId], references: [id])
 }
 
 model Turno {
@@ -51,24 +81,3 @@ model Asistencia {
   puestoTrabajo   PuestoTrabajo @relation(fields: [puestoTrabajoId], references: [id])
 }
 
-model Mina {
-  id        Int      @id @default(autoincrement())
-  nombre    String   @unique
-  producciones Produccion[]
-}
-
-model Produccion {
-  id              Int      @id @default(autoincrement())
-  fecha           DateTime
-  turnoId         Int
-  minaId          Int
-  perforistaId    Int
-  encargadoId     Int
-  carros          Int
-  sacos           Int
-  topesPerforados Int
-  turno           Turno    @relation(fields: [turnoId], references: [id])
-  mina            Mina     @relation(fields: [minaId], references: [id])
-  perforista      Usuario  @relation("Perforista", fields: [perforistaId], references: [id])
-  encargado       Usuario  @relation("Encargado", fields: [encargadoId], references: [id])
-}
