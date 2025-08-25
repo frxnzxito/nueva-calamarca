@@ -3,11 +3,43 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const SECRET = '1234'; //
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+app.post('/login', async (req, res) => {
+    const { ci, password } = req.body;
+
+    try {
+        const usuario = await prisma.usuario.findUnique({
+            where: { ci },
+            include: { rol: true }
+        });
+        if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        const valido = await bcrypt.compare(password, usuario.passwordHash);
+        if (!valido) return res.status(401).json({ error: 'Contraseña incorrecta' });
+
+        const token = jwt.sign(
+            { id: usuario.id, rol: usuario.rol.nombre },
+            SECRET,
+            { expiresIn: '1h' }
+        );
+
+        res.json({ token, usuario: { id: usuario.id, nombres: usuario.nombres, rol: usuario.rol.nombre } });
+    }   catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error en el login' });
+    }
+});
+
+
+require('dotenv').config();
+
 
 // Endpoint para obtener usuarios, con filtro opcional por rol
 app.get('/usuarios', async (req, res) => {

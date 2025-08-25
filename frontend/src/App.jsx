@@ -1,11 +1,11 @@
-import AsistenciaForm from './components/AsistenciaForm';
+import { AuthProvider } from './context/AuthContext';
+import AppRouter from './router';
 
 function App() {
   return (
-    <div>
-      <h1>Sistema Nueva Calamarca</h1>
-      <AsistenciaForm />
-    </div>
+    <AuthProvider>
+      <AppRouter />
+    </AuthProvider>
   );
 }
 

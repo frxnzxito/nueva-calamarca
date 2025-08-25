@@ -14,12 +14,13 @@ model Rol {
 }
 
 model Usuario {
-  id        Int      @id @default(autoincrement())
-  ci        String   @unique
-  apellidos String
-  nombres   String
-  foto      String?
-  rolId     Int
+  id            Int      @id @default(autoincrement())
+  ci            String   @unique
+  apellidos     String
+  nombres       String
+  foto          String?
+  rolId         Int
+  passwordHash  String? @default("")
   rol       Rol      @relation(fields: [rolId], references: [id])
   asistencias Asistencia[]
   produccionesPerforista Produccion[] @relation("Perforista")
