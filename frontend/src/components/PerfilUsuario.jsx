@@ -1,8 +1,7 @@
-import { useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 const PerfilUsuario = () => {
-  const { usuario } = useContext(AuthContext);
+  const { usuario } = useAuth();
 
   if (!usuario) return null;
 
@@ -12,7 +11,6 @@ const PerfilUsuario = () => {
       <p><strong>Nombre:</strong> {usuario.nombres} {usuario.apellidos}</p>
       <p><strong>CI:</strong> {usuario.ci}</p>
       <p><strong>Rol:</strong> {usuario.rol}</p>
-      {usuario.minaId && <p><strong>Mina asignada:</strong> {usuario.minaId}</p>}
     </div>
   );
 };

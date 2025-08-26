@@ -18,7 +18,10 @@ app.post('/login', async (req, res) => {
     try {
         const usuario = await prisma.usuario.findUnique({
             where: { ci },
-            include: { rol: true }
+            include: { 
+                rol: true,
+                mina: true
+            }
         });
         if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
 
@@ -39,7 +42,9 @@ app.post('/login', async (req, res) => {
             nombres: usuario.nombres,
             apellidos: usuario.apellidos,
             rol: usuario.rol.nombre,
-            minaId: usuario.minaId } });
+            mina: usuario.mina?.nombre ?? null,
+            ultimoAcceso: new Date().toDateString()
+         } });
     }   catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error en el login' });
