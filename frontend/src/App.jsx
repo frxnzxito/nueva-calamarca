@@ -13,6 +13,7 @@ import DiasTrabajadosPage from './pages/DiasTrabajadosPage';
 import PagoPage from './pages/PagoPage';
 import Layout from './components/Layout';
 import RutaPrivada from './components/RutaPrivada';
+import RutaPorRol from './components/RutaPorRol';
 
 function App() {
   return (
@@ -29,18 +30,38 @@ function App() {
             </RutaPrivada>
           }>
           {/* Página principal después del login */}
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={
+              <RutaPorRol><Dashboard /></RutaPorRol>
+            } />
 
             {/* Otras páginas */}
-            <Route path="/usuarios" element={<UsuariosPage />} />
-            <Route path="/produccion" element={<ProduccionPage />} />
-            <Route path="/asistencias" element={<AsistenciasPage />} />
-            <Route path="/salida-mineral" element={<SalidaMineralPage />} />
-            <Route path="/entrada-mineral" element={<EntradaMineralPage />} />            
-            <Route path="/planillas" element={<PlanillasPage />} />
-            <Route path="/perfil" element={<PerfilPage />} />
-            <Route path="/dias-trabajados" element={<DiasTrabajadosPage />} />
-            <Route path="/pago" element={<PagoPage />} />
+            <Route path="/usuarios" element={
+              <RutaPorRol><UsuariosPage /></RutaPorRol> 
+            } />
+            <Route path="/produccion" element={
+              <RutaPorRol><ProduccionPage /></RutaPorRol>
+            } />
+            <Route path="/asistencias" element={
+              <RutaPorRol><AsistenciasPage /></RutaPorRol>
+            } />
+            <Route path="/salida-mineral" element={
+              <RutaPorRol><SalidaMineralPage /></RutaPorRol>
+              } />
+            <Route path="/entrada-mineral" element={
+              <RutaPorRol><EntradaMineralPage /></RutaPorRol>
+              } />            
+            <Route path="/planillas" element={
+              <RutaPorRol><PlanillasPage /></RutaPorRol>
+              } />
+            <Route path="/perfil" element={
+              <RutaPorRol><PerfilPage /></RutaPorRol>
+              } />
+            <Route path="/dias-trabajados" element={
+              <RutaPorRol><DiasTrabajadosPage /></RutaPorRol>
+              } />
+            <Route path="/pago" element={
+              <RutaPorRol><PagoPage /></RutaPorRol>
+              } />
           </Route>
 
           {/* Redirección por defecto */}

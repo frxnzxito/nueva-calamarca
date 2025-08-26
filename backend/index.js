@@ -10,49 +10,56 @@ const SECRET = '1234'; //
 const app = express();
 app.use(cors());
 app.use(express.json());
-
+require('dotenv').config();
 // Endpoint para login
 app.post('/login', async (req, res) => {
-    const { ci, password } = req.body;
+  const { ci, password } = req.body;
 
-    try {
-        const usuario = await prisma.usuario.findUnique({
-            where: { ci },
-            include: { 
-                rol: true,
-                mina: true
-            }
-        });
-        if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+  try {
+    const usuario = await prisma.usuario.findUnique({
+      where: { ci },
+      select: {
+        id: true,
+        ci: true,
+        nombres: true,
+        apellidos: true,
+        rolId: true, // ✅ este campo es clave
+        minaId: true,
+        passwordHash: true,
+        rol: { select: { nombre: true } },
+        mina: { select: { nombre: true } }
+      }
+    });
 
-        const valido = await bcrypt.compare(password, usuario.passwordHash);
-        if (!valido) return res.status(401).json({ error: 'Contraseña incorrecta' });
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-        const token = jwt.sign(
-            { id: usuario.id, rol: usuario.rol.nombre },
-            SECRET,
-            { expiresIn: '1h' }
-        );
+    const valido = await bcrypt.compare(password, usuario.passwordHash);
+    if (!valido) return res.status(401).json({ error: 'Contraseña incorrecta' });
 
-        res.json({
-        token,
-        usuario: {
-            id: usuario.id,
-            ci: usuario.ci,
-            nombres: usuario.nombres,
-            apellidos: usuario.apellidos,
-            rol: usuario.rol.nombre,
-            mina: usuario.mina?.nombre ?? null,
-            ultimoAcceso: new Date().toDateString()
-         } });
-    }   catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Error en el login' });
-    }
+    const token = jwt.sign(
+      { id: usuario.id, rol: usuario.rol.nombre },
+      SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.json({
+      token,
+      usuario: {
+        id: usuario.id,
+        ci: usuario.ci,
+        nombres: usuario.nombres,
+        apellidos: usuario.apellidos,
+        rolId: usuario.rolId, // ✅ este campo debe llegar al frontend
+        rol: usuario.rol.nombre,
+        mina: usuario.mina?.nombre ?? null
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error en el login' });
+  }
 });
 
-
-require('dotenv').config();
 
 
 // Endpoint para obtener usuarios, con filtro opcional por rol
@@ -61,12 +68,75 @@ app.get('/usuarios', async (req, res) => {
   try {
     const usuarios = await prisma.usuario.findMany({
       where: rol ? { rol: { nombre: rol } } : {},
-      include: { rol: true }
+      include: { rol: true, mina: true }
     });
     res.json(usuarios);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al obtener usuarios' });
+  }
+});
+
+// Endpoint para crear usuario
+app.post('/usuarios', async (req, res) => {
+  const { ci, nombres, apellidos, rolId, minaId, password } = req.body;
+
+  try {
+    const passwordHash = await bcrypt.hash(password, 10);
+    const nuevo = await prisma.usuario.create({
+      data: {
+        ci,
+        nombres,
+        apellidos,
+        rolId,
+        minaId,
+        passwordHash
+      }
+    });
+    res.status(201).json(nuevo);
+  } catch (error) {
+    console.error('❌ Error al crear usuario:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para actualizar usuario
+app.put('/usuarios/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { ci, nombres, apellidos, rolId, minaId } = req.body;
+
+  try {
+    const actualizado = await prisma.usuario.update({
+      where: { id },
+      data: { ci, nombres, apellidos, rolId, minaId }
+    });
+    res.json(actualizado);
+  } catch (error) {
+    console.error('❌ Error al actualizar usuario:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para eliminar usuario
+app.delete('/usuarios/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    await prisma.usuario.delete({ where: { id } });
+    res.status(204).end();
+  } catch (error) {
+    console.error('❌ Error al eliminar usuario:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+//Endpoint para obtener roles
+app.get('/roles', async (req, res) => {
+  try {
+    const roles = await prisma.rol.findMany();
+    res.json(roles);
+  } catch (error) {
+    console.error('❌ Error al obtener roles:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
