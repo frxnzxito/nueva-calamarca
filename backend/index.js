@@ -80,6 +80,10 @@ app.get('/usuarios', async (req, res) => {
 // Endpoint para crear usuario
 app.post('/usuarios', async (req, res) => {
   const { ci, nombres, apellidos, rolId, minaId, password } = req.body;
+  const existente = await prisma.usuario.findUnique({ where: { ci } });
+  if (existente) {
+    return res.status(409).json({ error: 'Ya existe un usuario con ese CI' });
+  }
 
   try {
     const passwordHash = await bcrypt.hash(password, 10);
@@ -88,8 +92,8 @@ app.post('/usuarios', async (req, res) => {
         ci,
         nombres,
         apellidos,
-        rolId,
-        minaId,
+        rolId: parseInt(rolId),
+        minaId: minaId ? parseInt(minaId) : null,
         passwordHash
       }
     });
@@ -104,6 +108,15 @@ app.post('/usuarios', async (req, res) => {
 app.put('/usuarios/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const { ci, nombres, apellidos, rolId, minaId } = req.body;
+  const existente = await prisma.usuario.findFirst({
+    where: {
+      ci,
+      NOT: { id: id } // excluye al usuario que estamos editando
+    }
+  });
+  if (existente) {
+    return res.status(409).json({ error: 'Otro usuario ya tiene ese CI' });
+  }
 
   try {
     const actualizado = await prisma.usuario.update({
