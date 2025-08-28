@@ -8,6 +8,12 @@ const Layout = () => {
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
 
+  const handleNavigate = (ruta) => {
+  // Aquí podrías disparar una función de auditoría
+  console.log(`Usuario ${usuario.id} navegó a ${ruta}`);
+  navigate(ruta);
+};
+
 
   const handleLogout = () => {
     logout();
@@ -21,21 +27,20 @@ const Layout = () => {
       <h2>📋 Panel principal</h2>
       <PerfilUsuario />
       
-      <p>Rol ID detectado: {usuario?.rolId}</p>
-
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
         {botonesPorRuta
           .filter(b => rutasPermitidas.includes(b.ruta))
           .map(b => (
-            <button key={b.ruta} onClick={() => navigate(b.ruta)}>
+            <button key={b.ruta} onClick={() => handleNavigate(b.ruta)}>
               {b.label}
             </button>
           ))}
+      </div>
 
-        <button onClick={handleLogout} style={{ marginLeft: 'auto', backgroundColor: '#f44336', color: 'white' }}>
+      <div style={{ textAlign: 'right' }}>
+        <button onClick={handleLogout} style={{ backgroundColor: '#f44336', color: 'white' }}>
           🔒 Cerrar sesión
-        </button>
-        
+        </button>        
       </div>
 
       <Outlet />

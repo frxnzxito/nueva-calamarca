@@ -18,6 +18,7 @@ model Mina {
   nombre        String
   encargado     Usuario[] // Relación inversa
   producciones  Produccion[]
+  asistencias   Asistencia[]
 }
 
 model Usuario {
@@ -71,13 +72,14 @@ model PuestoTrabajo {
 }
 
 model Asistencia {
-  id              Int      @id @default(autoincrement())
-  fecha           DateTime
-  usuarioId       Int
-  turnoId         Int
-  puestoTrabajoId Int
-  usuario         Usuario  @relation(fields: [usuarioId], references: [id])
-  turno           Turno    @relation(fields: [turnoId], references: [id])
-  puestoTrabajo   PuestoTrabajo @relation(fields: [puestoTrabajoId], references: [id])
+  id               Int       @id @default(autoincrement())
+  fecha            DateTime
+  usuarioId        Int
+  turnoId          Int
+  puestoTrabajoId  Int
+  minaId           Int       // ← este campo debe existir
+  usuario          Usuario   @relation(fields: [usuarioId], references: [id])
+  turno            Turno     @relation(fields: [turnoId], references: [id])
+  puestoTrabajo    PuestoTrabajo @relation(fields: [puestoTrabajoId], references: [id])
+  mina             Mina      @relation(fields: [minaId], references: [id])
 }
-

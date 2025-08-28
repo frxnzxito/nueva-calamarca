@@ -11,6 +11,9 @@ const PerfilUsuario = () => {
       <p><strong>Nombre:</strong> {usuario.nombres} {usuario.apellidos}</p>
       <p><strong>CI:</strong> {usuario.ci}</p>
       <p><strong>Rol:</strong> {usuario.rol}</p>
+
+      {usuario.mina && <p><strong>Mina asignada:</strong> {usuario.mina}</p>}
+
     </div>
   );
 };

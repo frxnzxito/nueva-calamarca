@@ -11,7 +11,7 @@ const LoginForm = ({ onLogin }) => {
     try {
       const res = await axios.post('http://localhost:3000/login', { ci, password });
       localStorage.setItem('token', res.data.token);
-      onLogin(res.data.usuario);
+      onLogin({ usuario: res.data.usuario, token: res.data.token });
     } catch (err) {
       setError(err.response?.data?.error || 'Error de conexión');
     }

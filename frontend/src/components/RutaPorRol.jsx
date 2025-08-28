@@ -6,14 +6,29 @@ const RutaPorRol = ({ children }) => {
   const { usuario } = useAuth();
   const location = useLocation();
 
-  if (!usuario) return <Navigate to="/" />;
+    if (!usuario) {
+    return <p>⏳ Cargando usuario...</p>;
+    }
 
-  const rutasPermitidas = permisosPorRolId[usuario.rolId] || [];
-  const rutaActual = location.pathname;
+  const rolId = parseInt(usuario.rolId);
+  const rutaActual = location.pathname.replace(/\/+$/, '');
 
-  return rutasPermitidas.includes(rutaActual)
-    ? children
-    : <Navigate to="/perfil" />;
+  const rutasPermitidas = (permisosPorRolId[rolId] || []).map(r => r.replace(/\/+$/, ''));
+
+  const tienePermiso = rutasPermitidas.some(ruta =>
+    rutaActual === ruta || rutaActual.startsWith(ruta + '/')
+  );
+
+  console.log('🧠 Ruta actual:', rutaActual);
+  console.log('✅ Rutas permitidas:', rutasPermitidas);
+  console.log('🔐 Tiene permiso:', tienePermiso);
+
+    if (!tienePermiso) {
+    return <Navigate to="/perfil" />;
+    }
+
+    return children;
+
 };
 
 export default RutaPorRol;

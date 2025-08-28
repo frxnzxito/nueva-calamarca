@@ -1,11 +1,14 @@
 // backend/index.js
 const { PrismaClient } = require('@prisma/client');
+const { verificarToken } = require('./middleware/auth');
 const prisma = new PrismaClient();
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { parse } = require('dotenv');
 const SECRET = '1234'; //
+
 
 const app = express();
 app.use(cors());
@@ -51,6 +54,7 @@ app.post('/login', async (req, res) => {
         apellidos: usuario.apellidos,
         rolId: usuario.rolId, // ✅ este campo debe llegar al frontend
         rol: usuario.rol.nombre,
+        minaId: usuario.minaId, // Nuevo campo minaId
         mina: usuario.mina?.nombre ?? null
       }
     });
@@ -164,14 +168,30 @@ app.get('/turnos', async (req, res) => {
   }
 });
 
-//Endpoint Obtener minas
-app.get('/minas', async (req, res) => {
+// Endpoint para obtener minas (solo para roles autorizados)
+app.get('/minas', verificarToken, async (req, res) => {
   try {
-    const minas = await prisma.mina.findMany();
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.usuario.id },
+      include: { rol: true }
+    });
+
+    const rolPermitido = ['Administrador', 'Licenciado'];
+    if (!usuario || !rolPermitido.includes(usuario.rol.nombre)) {
+      return res.status(403).json({ error: 'No tienes permiso para ver minas' });
+    }
+
+    const minas = await prisma.mina.findMany({
+      select: {
+        id: true,
+        nombre: true
+      }
+    });
+
     res.json(minas);
   } catch (error) {
     console.error('❌ Error al obtener minas:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno al obtener minas' });
   }
 });
 
@@ -186,39 +206,144 @@ app.get('/puestos', async (req, res) => {
   }
 });
 
-// Endpoint para registrar asistencia
-app.post('/asistencia', async (req, res) => {
+//Endpoint para obtener asistencias con datos relacionados
+app.get('/asistencias', verificarToken, async (req, res) => {
   try {
-    const { fecha, usuarioId, turnoId, puestoTrabajoId } = req.body;
-
-    // Validación básica
-    if (!fecha || !usuarioId || !turnoId || !puestoTrabajoId) {
-      return res.status(400).json({ error: 'Faltan datos obligatorios' });
-    }
-
-    // Verificar que el usuario sea Jornalero
     const usuario = await prisma.usuario.findUnique({
-      where: { id: usuarioId },
+      where: { id: req.usuario.id },
       include: { rol: true }
     });
 
-    if (!usuario || usuario.rol.nombre !== 'Jornalero') {
+    if (!usuario || !usuario.rol) {
+      return res.status(403).json({ error: 'Acceso denegado' });
+    }
+
+    const rango = usuario.rolId; // ← asegúrate de tener este campo en tu modelo
+    const { fecha, turnoId, minaId } = req.query;
+
+    let where = {};
+
+    if (rango === 1 || rango === 2) {
+        if (!minaId) {
+          return res.status(400).json({ error: 'Debes seleccionar una mina para ver asistencias' });
+        }
+      // Ver todas las asistencias (sin minaId)
+      if (minaId) where.usuario = { minaId: parseInt(minaId) };
+      if (fecha) where.fecha = { equals: new Date(fecha) };
+      if (turnoId) where.turnoId = parseInt(turnoId);
+    } else if (rango === 3) {
+      // Encargado de mina: filtra por su mina
+      where.usuario = { minaId: usuario.minaId };
+      if (fecha) where.fecha = { equals: new Date(fecha) };
+      if (turnoId) where.turnoId = parseInt(turnoId);
+    } else if (rango === 6) {
+      // Jornalero: solo su propia asistencia
+      where.usuarioId = usuario.id;
+    } else {
+      return res.status(403).json({ error: 'No tienes permiso para ver asistencias' });
+    }
+
+
+    const asistencias = await prisma.asistencia.findMany({
+      where,
+      include: {
+        usuario: true,
+        turno: true,
+        puestoTrabajo: true,
+        mina: true
+      },
+      orderBy: { fecha: 'desc' }
+    });
+
+    res.json(asistencias);
+  } catch (error) {
+    console.error('❌ Error al obtener asistencias:', error);
+    res.status(500).json({ error: 'Error interno al obtener asistencias' });
+  }
+});
+
+// Endpoint para registrar asistencia
+app.post('/asistencia', verificarToken, async (req, res) => {
+  try {
+    const { usuarioId, turnoId, puestoTrabajoId, fecha } = req.body;
+
+    // Validación básica
+    const usuarioIdInt = parseInt(usuarioId);
+    const turnoIdInt = parseInt(turnoId);
+    const puestoTrabajoIdInt = parseInt(puestoTrabajoId);
+    const fechaObj = new Date(fecha);
+
+    if (!fechaObj || isNaN(usuarioIdInt) || isNaN(turnoIdInt) || isNaN(puestoTrabajoIdInt)) {
+      return res.status(400).json({ error: 'Faltan datos obligatorios o están mal formateados' });
+    }
+
+    // Datos del usuario que registra
+    const autorizado = await prisma.usuario.findUnique({
+      where: { id: req.usuario.id },
+      include: { rol: true }
+    });
+
+    const rol = autorizado?.rol?.nombre;
+    const rango = autorizado?.rol?.rango;
+    const rolPermitido = ['Administrador', 'Licenciado', 'Encargado mina'];
+
+    if (!autorizado || !rolPermitido.includes(rol)) {
+      return res.status(403).json({ error: 'No tienes permiso para registrar asistencia' });
+    }
+
+    // Datos del jornalero
+    const jornalero = await prisma.usuario.findUnique({
+      where: { id: usuarioIdInt },
+      include: { rol: true }
+    });
+
+    if (!jornalero || jornalero.rol.nombre !== 'Jornalero') {
       return res.status(403).json({ error: 'Solo se registra asistencia de jornaleros' });
     }
 
-    // Registrar asistencia
-    const asistencia = await prisma.asistencia.create({
-      data: {
-        fecha: new Date(fecha),
-        usuarioId,
-        turnoId,
-        puestoTrabajoId
+    // Validación cruzada por mina
+    if (rol === 'Encargado mina' && autorizado.minaId !== jornalero.minaId) {
+      return res.status(403).json({ error: 'No puedes registrar asistencia de un jornalero de otra mina' });
+    }
+
+// Validación cruzada para roles 1 y 2
+    const minaSeleccionada = parseInt(req.body.minaId); // ← si decides enviar minaId desde el frontend
+    if (['Administrador', 'Licenciado'].includes(rol)) {
+      if (minaSeleccionada !== jornalero.minaId) {
+        return res.status(403).json({
+          error: 'El jornalero no pertenece a la mina seleccionada'
+        });
+      }
+    }
+
+
+    // Validación de asistencia duplicada (opcional)
+    const asistenciaExistente = await prisma.asistencia.findFirst({
+      where: {
+        usuarioId: usuarioIdInt,
+        fecha: fechaObj
       }
     });
 
+    if (asistenciaExistente) {
+      return res.status(409).json({ error: 'Ya existe una asistencia registrada para este jornalero en esta fecha' });
+    }
+
+    // Registrar asistencia con trazabilidad
+    const asistencia = await prisma.asistencia.create({
+      data: {
+        fecha: fechaObj,
+        usuarioId: usuarioIdInt,
+        turnoId: turnoIdInt,
+        puestoTrabajoId: puestoTrabajoIdInt,
+        minaId: jornalero.minaId
+      }
+    });
+
+    console.log('✅ Asistencia registrada:', asistencia);
     res.status(201).json(asistencia);
   } catch (error) {
-    console.error(error);
+    console.error('❌ Error al registrar asistencia:', error);
     res.status(500).json({ error: 'Error al registrar asistencia' });
   }
 });

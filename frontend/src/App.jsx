@@ -21,16 +21,16 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Página de login */}
-          <Route path="/" element={<Login />} />
+          <Route path="/login" element={<Login />} />
 
 
-          <Route element={
+          <Route path="/" element={
             <RutaPrivada>
               <Layout />
             </RutaPrivada>
           }>
           {/* Página principal después del login */}
-            <Route path="/dashboard" element={
+            <Route index element={
               <RutaPorRol><Dashboard /></RutaPorRol>
             } />
 
@@ -60,7 +60,7 @@ function App() {
               <RutaPorRol><DiasTrabajadosPage /></RutaPorRol>
               } />
             <Route path="/pago" element={
-              <RutaPorRol><PagoPage /></RutaPorRol>
+              <RutaPorRol></RutaPorRol>
               } />
           </Route>
 

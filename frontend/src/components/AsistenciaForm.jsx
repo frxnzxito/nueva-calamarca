@@ -40,7 +40,7 @@ const AsistenciaForm = () => {
       <label>Fecha:</label>
       <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} required />
 
-      <label>Jornalero:</label>
+      <label>Jor</label>
       <select value={usuarioId} onChange={e => setUsuarioId(e.target.value)} required>
         <option value="">Seleccione</option>
         {usuarios.map(u => (
