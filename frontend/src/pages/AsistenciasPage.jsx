@@ -61,7 +61,12 @@ export default function AsistenciasPage() {
       )}
 
       <h1>Gestión de Asistencias</h1>
-      {minaIdFinal && <TablaAsistencias minaId={minaIdFinal} />}
+      <TablaAsistencias
+            minaId={minaIdFinal}
+            esSupervisor={esSupervisor}
+            token={token}
+            usuario={usuario}
+        />
     </div>
   );
 }

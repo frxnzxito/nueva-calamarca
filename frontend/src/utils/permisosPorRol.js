@@ -55,6 +55,7 @@ export const permisosPorRolId = {
     ],
     6:[ //Jornalero
         '/asistencias',
+        '/produccion',
         '/perfil',
         '/dias-trabajados',
         '/pago'

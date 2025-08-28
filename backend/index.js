@@ -14,6 +14,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 require('dotenv').config();
+
 // Endpoint para login
 app.post('/login', async (req, res) => {
   const { ci, password } = req.body;
@@ -55,7 +56,7 @@ app.post('/login', async (req, res) => {
         rolId: usuario.rolId, // ✅ este campo debe llegar al frontend
         rol: usuario.rol.nombre,
         minaId: usuario.minaId, // Nuevo campo minaId
-        mina: usuario.mina?.nombre ?? null
+        mina: usuario.mina ?? null
       }
     });
   } catch (error) {
@@ -176,19 +177,37 @@ app.get('/minas', verificarToken, async (req, res) => {
       include: { rol: true }
     });
 
-    const rolPermitido = ['Administrador', 'Licenciado'];
-    if (!usuario || !rolPermitido.includes(usuario.rol.nombre)) {
-      return res.status(403).json({ error: 'No tienes permiso para ver minas' });
+    if (!usuario || !usuario.rol) {
+      return res.status(403).json({ error: 'Usuario no válido' });
     }
 
-    const minas = await prisma.mina.findMany({
-      select: {
-        id: true,
-        nombre: true
-      }
-    });
+    const nombreRol = usuario.rol.nombre;
 
-    res.json(minas);
+    if (['Administrador', 'Licenciado'].includes(nombreRol)) {
+      // Roles altos: ver todas las minas
+      const minas = await prisma.mina.findMany({
+        select: { id: true, nombre: true }
+      });
+      return res.json(minas);
+    }
+
+    if (nombreRol === 'Encargado de mina') {
+      // Rol 3: ver solo su mina
+      if (!usuario.minaId) {
+        return res.status(400).json({ error: 'No tienes una mina asignada' });
+      }
+
+      const mina = await prisma.mina.findUnique({
+        where: { id: usuario.minaId },
+        select: { id: true, nombre: true }
+      });
+
+      return res.json(mina ? [mina] : []);
+    }
+
+    // Otros roles: acceso denegado
+    return res.status(403).json({ error: 'No tienes permiso para ver minas' });
+
   } catch (error) {
     console.error('❌ Error al obtener minas:', error);
     res.status(500).json({ error: 'Error interno al obtener minas' });
@@ -306,7 +325,7 @@ app.post('/asistencia', verificarToken, async (req, res) => {
       return res.status(403).json({ error: 'No puedes registrar asistencia de un jornalero de otra mina' });
     }
 
-// Validación cruzada para roles 1 y 2
+    // Validación cruzada para roles 1 y 2
     const minaSeleccionada = parseInt(req.body.minaId); // ← si decides enviar minaId desde el frontend
     if (['Administrador', 'Licenciado'].includes(rol)) {
       if (minaSeleccionada !== jornalero.minaId) {
@@ -349,83 +368,71 @@ app.post('/asistencia', verificarToken, async (req, res) => {
 });
 
 //Endpoint para registrar producción
-app.post('/produccion', async (req, res) => {
-  const {
-    fecha, turnoId, encargadoId,
-    perforistaId, ayudanteId,
-    topesPerforados, carrosSacados, sacosSacados
-  } = req.body;
-
+app.post('/produccion', verificarToken, async (req, res) => {
   try {
-    // Validación: perforista ≠ ayudante
-    if (perforistaId === ayudanteId) {
-      return res.status(400).json({ error: 'El perforista y el ayudante deben ser distintos' });
+    const {
+      fecha,
+      turnoId,
+      minaId,
+      encargadoId,
+      perforistaId,
+      ayudanteId,
+      topesPerforados,
+      carrosSacados,
+      sacosSacados
+    } = req.body;
+
+    // Validación básica
+    if (!fecha || !turnoId || !minaId || !encargadoId || !perforistaId || !ayudanteId) {
+      return res.status(400).json({ error: 'Faltan campos obligatorios' });
     }
 
-    // Validación: encargado debe tener mina asignada
-    const encargado = await prisma.usuario.findUnique({
-      where: { id: encargadoId },
-      include: { mina: true }
-    });
-
-    if (!encargado || !encargado.mina) {
-      return res.status(400).json({ error: 'Encargado sin mina asignada' });
-    }
-
-    const minaId = encargado.mina.id;
-
-    // Validación: perforista y ayudante deben ser jornaleros
-    const [perforista, ayudante] = await Promise.all([
-      prisma.usuario.findUnique({ where: { id: perforistaId }, include: { rol: true } }),
-      prisma.usuario.findUnique({ where: { id: ayudanteId }, include: { rol: true } })
-    ]);
-
-    if (!perforista || perforista.rol.nombre !== 'Jornalero') {
-      return res.status(403).json({ error: 'El perforista debe tener rol Jornalero' });
-    }
-
-    if (!ayudante || ayudante.rol.nombre !== 'Jornalero') {
-      return res.status(403).json({ error: 'El ayudante debe tener rol Jornalero' });
-    }
-
-    // Validación: no duplicar producción por fecha + turno + mina
-    const existe = await prisma.produccion.findFirst({
+    // Validación cruzada: ¿todos pertenecen a la misma mina?
+    const usuarios = await prisma.usuario.findMany({
       where: {
-        fecha: new Date(fecha),
-        turnoId: parseInt(turnoId),
-        minaId
-      }
+        id: { in: [encargadoId, perforistaId, ayudanteId] }
+      },
+      select: { minaId: true }
     });
 
-    if (existe) {
-      return res.status(409).json({ error: 'Ya existe una producción registrada para esa fecha, turno y mina' });
+    const minasUnicas = new Set(usuarios.map(u => u.minaId));
+    if (minasUnicas.size !== 1 || !minasUnicas.has(minaId)) {
+      return res.status(400).json({ error: 'Los usuarios no pertenecen a la misma mina' });
     }
 
     // Registro
     const produccion = await prisma.produccion.create({
       data: {
         fecha: new Date(fecha),
-        turnoId: parseInt(turnoId),
-        encargadoId: parseInt(encargadoId),
-        perforistaId: parseInt(perforistaId),
-        ayudanteId: parseInt(ayudanteId),
-        topesPerforados: parseInt(topesPerforados),
-        carrosSacados: parseInt(carrosSacados),
-        sacosSacados: parseInt(sacosSacados),
-        minaId
+        turnoId,
+        minaId,
+        encargadoId,
+        perforistaId,
+        ayudanteId,
+        topesPerforados,
+        carrosSacados,
+        sacosSacados
+      },
+      include: {
+        mina: true,
+        turno: true,
+        encargado: true,
+        perforista: true,
+        ayudante: true
       }
     });
 
-    res.status(201).json(produccion);
+    res.json(produccion);
   } catch (error) {
     console.error('❌ Error al registrar producción:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno al registrar producción' });
   }
 });
 
 // Endpoint para obtener producciones con filtros opcionales
 app.get('/produccion', async (req, res) => {
   const { minaId, fecha, turnoId } = req.query;
+  console.log('minaId recibido', minaId)
 
   try {
       const where = {};
@@ -437,6 +444,7 @@ app.get('/produccion', async (req, res) => {
     const produccion = await prisma.produccion.findMany({
       where,
       include: {
+        mina: true,
         turno: true,
         perforista: true,
         ayudante: true

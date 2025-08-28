@@ -45,9 +45,13 @@ const UsuariosPage = () => {
   };
 
   useEffect(() => {
-    cargarUsuarios();
-    cargarMinas();
+    cargarUsuarios();    
     cargarRoles();
+      const usuario = JSON.parse(localStorage.getItem('usuario'));
+    const rolPermitido = ['Administrador', 'Licenciado', 'Encargado de mina'];
+    if (usuario && rolPermitido.includes(usuario.rol?.nombre)) {
+        cargarMinas();
+    }
   }, []);
 
   const crearUsuario = async () => {
