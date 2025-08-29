@@ -470,6 +470,116 @@ app.delete('/produccion/:id', async (req, res) => {
   }
 });
 
+//Endpoint para generar planillas
+app.get('/planilla', async (req, res) => {
+  const { minaId, turnoId, inicio, fin } = req.query;
+
+  if (!minaId || !turnoId || !inicio || !fin) {
+    return res.status(400).json({ error: 'Faltan parámetros' });
+  }
+
+  try {
+    const asistencias = await prisma.asistencia.findMany({
+      where: {
+        minaId: parseInt(minaId),
+        turnoId: parseInt(turnoId),
+        fecha: {
+          gte: new Date(inicio),
+          lte: new Date(fin)
+        },
+        validada: true
+      },
+      include: {
+        usuario: {
+          select: {
+            id: true,
+            ci: true,
+            nombres: true,
+            apellidos: true,
+            rolInterno: true // 'Perforista' o 'Ayudante'
+          }
+        }
+      }
+    });
+
+    const producciones = await prisma.produccion.findMany({
+      where: {
+        minaId: parseInt(minaId),
+        turnoId: parseInt(turnoId),
+        fecha: {
+          gte: new Date(inicio),
+          lte: new Date(fin)
+        }
+      },
+      select: {
+        fecha: true,
+        perforistaId: true,
+        topesPerforados: true
+      }
+    });
+
+    const resumen = calcularPlanilla(asistencias, producciones);
+    res.json(resumen);
+  } catch (error) {
+    console.error('❌ Error al generar planilla:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+//calcular Planilla
+function calcularPlanilla(asistencias, producciones) {
+  const jornaleros = {};
+
+  for (const a of asistencias) {
+    const id = a.usuario.id;
+    if (!jornaleros[id]) {
+      jornaleros[id] = {
+        ci: a.usuario.ci,
+        nombre: `${a.usuario.nombres} ${a.usuario.apellidos}`,
+        rolInterno: a.usuario.rolInterno,
+        dias: [],
+        faltas: [],
+        topes: 0
+      };
+    }
+
+    if (a.presente) {
+      jornaleros[id].dias.push(a.fecha);
+    } else {
+      jornaleros[id].faltas.push(a.fecha);
+    }
+  }
+
+  for (const p of producciones) {
+    if (jornaleros[p.perforistaId]) {
+      jornaleros[p.perforistaId].topes += p.topesPerforados;
+    }
+  }
+
+  const resultado = Object.values(jornaleros).map(j => {
+    const diasTrabajados = j.dias.length;
+    const faltas = j.faltas.map(f => new Date(f).getDay()); // 1 = lunes, 2 = martes
+    const montoBase = faltas.length > 0 ? 180 : 200;
+    const bloqueado = faltas.includes(1) && faltas.includes(2);
+
+    let pago = bloqueado ? 0 : diasTrabajados * montoBase;
+
+    if (j.rolInterno === 'Perforista') {
+      pago += j.topes * 200;
+    }
+
+    return {
+      jornalero: j.nombre,
+      ci: j.ci,
+      diasTrabajados,
+      montoPorJornal: bloqueado ? 0 : montoBase,
+      pagoTotal: pago
+    };
+  });
+
+  return resultado;
+}
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);

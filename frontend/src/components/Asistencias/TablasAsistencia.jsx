@@ -11,15 +11,14 @@ export default function TablaAsistencias() {
 
   const { token, usuario } = useAuth();
 
-  if (!usuario) return <p>⏳ Cargando usuario...</p>;
+  if (!usuario) return <div className="container py-4"><p className="text-muted">⏳ Cargando usuario...</p></div>;
 
   const puedeVerAsistencia = permisosPorRolId[String(usuario.rolId)]?.includes('/asistencias');
-  if (!puedeVerAsistencia) return <p>🚫 No tienes permiso para ver asistencias.</p>;
+  if (!puedeVerAsistencia) return <div className="container py-4"><p className="alert alert-danger">🚫 No tienes permiso para ver asistencias.</p></div>;
 
   const esSupervisor = [1, 2].includes(usuario.rolId);
   const minaIdFinal = esSupervisor ? minaSeleccionada : usuario.minaId;
 
-  // Cargar minas si es supervisor
   useEffect(() => {
     if (esSupervisor) {
       fetch('http://localhost:3000/minas', {
@@ -36,7 +35,6 @@ export default function TablaAsistencias() {
     }
   }, []);
 
-  // Cargar asistencias
   useEffect(() => {
     if (!minaIdFinal) return;
 
@@ -61,13 +59,13 @@ export default function TablaAsistencias() {
   }, [minaIdFinal, fechaSeleccionada, turnoSeleccionado]);
 
   return (
-    <div>
-      <h2>📋 Asistencias registradas</h2>
+    <div className="container py-4">
+      <h2 className="text-secondary mb-4">📋 Asistencias registradas</h2>
 
       {esSupervisor && (
-        <div style={{ marginBottom: '1rem' }}>
-          <label>Seleccionar mina:</label>
-          <select value={minaSeleccionada} onChange={e => setMinaSeleccionada(e.target.value)}>
+        <div className="mb-3">
+          <label className="form-label">Seleccionar mina:</label>
+          <select className="form-select" value={minaSeleccionada} onChange={e => setMinaSeleccionada(e.target.value)}>
             <option value="">-- Selecciona una mina --</option>
             {minas.map(mina => (
               <option key={mina.id} value={mina.id}>{mina.nombre}</option>
@@ -76,53 +74,48 @@ export default function TablaAsistencias() {
         </div>
       )}
 
-      <div style={{ marginBottom: '1rem' }}>
-        <label>
-          Fecha:{' '}
-          <input
-            type="date"
-            value={fechaSeleccionada}
-            onChange={e => setFechaSeleccionada(e.target.value)}
-          />
-        </label>{' '}
-        <label>
-          Turno:{' '}
-          <select
-            value={turnoSeleccionado}
-            onChange={e => setTurnoSeleccionado(e.target.value)}
-          >
+      <form className="row g-3 mb-4">
+        <div className="col-md-4">
+          <label className="form-label">Fecha</label>
+          <input type="date" className="form-control" value={fechaSeleccionada} onChange={e => setFechaSeleccionada(e.target.value)} />
+        </div>
+        <div className="col-md-4">
+          <label className="form-label">Turno</label>
+          <select className="form-select" value={turnoSeleccionado} onChange={e => setTurnoSeleccionado(e.target.value)}>
             <option value="">Todos</option>
             <option value="1">Primera</option>
             <option value="2">Segunda</option>
             <option value="3">Tercera</option>
           </select>
-        </label>
-      </div>
+        </div>
+      </form>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Jornalero</th>
-            <th>Turno</th>
-            <th>Puesto</th>
-            <th>Mina</th>
-            <th>Validación</th>
-          </tr>
-        </thead>
-        <tbody>
-          {asistencias.map(a => (
-            <tr key={a.id}>
-              <td>{new Date(a.fecha).toLocaleDateString()}</td>
-              <td>{a.usuario?.nombres} {a.usuario?.apellidos}</td>
-              <td>{a.turno?.nombre}</td>
-              <td>{a.puestoTrabajo?.nombre}</td>
-              <td>{a.mina?.nombre ?? 'Sin mina'}</td>
-              <td>{a.validado ? '✅ Validado' : '⏳ Pendiente'}</td>
+      <div className="table-responsive">
+        <table className="table table-bordered table-hover">
+          <thead className="table-light">
+            <tr>
+              <th>Fecha</th>
+              <th>Jornalero</th>
+              <th>Turno</th>
+              <th>Puesto</th>
+              <th>Mina</th>
+              <th>Validación</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {asistencias.map(a => (
+              <tr key={a.id}>
+                <td>{new Date(a.fecha).toLocaleDateString()}</td>
+                <td>{a.usuario?.nombres} {a.usuario?.apellidos}</td>
+                <td>{a.turno?.nombre}</td>
+                <td>{a.puestoTrabajo?.nombre}</td>
+                <td>{a.mina?.nombre ?? 'Sin mina'}</td>
+                <td>{a.validado ? '✅ Validado' : '⏳ Pendiente'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

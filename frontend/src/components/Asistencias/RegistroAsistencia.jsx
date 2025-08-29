@@ -19,7 +19,6 @@ export default function RegistroAsistencia() {
     ? (minaSeleccionada ? parseInt(minaSeleccionada) : null)
     : usuario.minaId;
 
-  // Cargar minas, turnos y puestos
   useEffect(() => {
     if (esSupervisor) {
       fetch('/minas', {
@@ -29,7 +28,7 @@ export default function RegistroAsistencia() {
         .then(data => {
           setMinas(data);
           if (data.length > 0 && !minaSeleccionada) {
-            setMinaSeleccionada(String(data[0].id)); // ← valor inicial
+            setMinaSeleccionada(String(data[0].id));
           }
         })
         .catch(err => console.error('❌ Error al cargar minas:', err));
@@ -44,7 +43,6 @@ export default function RegistroAsistencia() {
       .then(setPuestos);
   }, []);
 
-  // Cargar jornaleros según mina
   useEffect(() => {
     if (!minaIdFinal) return;
 
@@ -82,46 +80,54 @@ export default function RegistroAsistencia() {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="row g-3">
       {esSupervisor && (
-        <label>
-          Mina:
-          <select value={minaSeleccionada} onChange={e => setMinaSeleccionada(e.target.value)}>
+        <div className="col-md-4">
+          <label className="form-label">Mina</label>
+          <select className="form-select" value={minaSeleccionada} onChange={e => setMinaSeleccionada(e.target.value)}>
             <option value="">Seleccionar mina</option>
             {minas.map(m => (
               <option key={m.id} value={m.id}>{m.nombre}</option>
             ))}
           </select>
-        </label>
+        </div>
       )}
 
-      <label>Jornalero:</label>
-      <select value={form.usuarioId} onChange={e => setForm({ ...form, usuarioId: e.target.value })}>
-        <option value="">Seleccionar</option>
-        {jornaleros.map(j => (
-          <option key={j.id} value={j.id}>
-            {j.nombres} {j.apellidos}
-          </option>
-        ))}
-      </select>
+      <div className="col-md-4">
+        <label className="form-label">Jornalero</label>
+        <select className="form-select" value={form.usuarioId} onChange={e => setForm({ ...form, usuarioId: e.target.value })}>
+          <option value="">Seleccionar</option>
+          {jornaleros.map(j => (
+            <option key={j.id} value={j.id}>
+              {j.nombres} {j.apellidos}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <label>Turno:</label>
-      <select value={form.turnoId} onChange={e => setForm({ ...form, turnoId: e.target.value })}>
-        <option value="">Seleccionar</option>
-        {turnos.map(t => (
-          <option key={t.id} value={t.id}>{t.nombre}</option>
-        ))}
-      </select>
+      <div className="col-md-2">
+        <label className="form-label">Turno</label>
+        <select className="form-select" value={form.turnoId} onChange={e => setForm({ ...form, turnoId: e.target.value })}>
+          <option value="">Seleccionar</option>
+          {turnos.map(t => (
+            <option key={t.id} value={t.id}>{t.nombre}</option>
+          ))}
+        </select>
+      </div>
 
-      <label>Puesto de trabajo:</label>
-      <select value={form.puestoTrabajoId} onChange={e => setForm({ ...form, puestoTrabajoId: e.target.value })}>
-        <option value="">Seleccionar</option>
-        {puestos.map(p => (
-          <option key={p.id} value={p.id}>{p.nombre}</option>
-        ))}
-      </select>
+      <div className="col-md-2">
+        <label className="form-label">Puesto de trabajo</label>
+        <select className="form-select" value={form.puestoTrabajoId} onChange={e => setForm({ ...form, puestoTrabajoId: e.target.value })}>
+          <option value="">Seleccionar</option>
+          {puestos.map(p => (
+            <option key={p.id} value={p.id}>{p.nombre}</option>
+          ))}
+        </select>
+      </div>
 
-      <button type="submit">Registrar asistencia</button>
+      <div className="col-12 text-end">
+        <button type="submit" className="btn btn-primary">Registrar asistencia</button>
+      </div>
     </form>
   );
 }

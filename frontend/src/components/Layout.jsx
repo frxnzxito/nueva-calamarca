@@ -1,19 +1,16 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import PerfilUsuario from './PerfilUsuario';
 import { useAuth } from '../context/AuthContext';
-import { permisosPorRolId } from '../utils/permisosPorRol';
-import { botonesPorRuta } from '../utils/permisosPorRol';
+import { permisosPorRolId, botonesPorRuta } from '../utils/permisosPorRol';
 
 const Layout = () => {
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
 
   const handleNavigate = (ruta) => {
-  // Aquí podrías disparar una función de auditoría
-  console.log(`Usuario ${usuario.id} navegó a ${ruta}`);
-  navigate(ruta);
-};
-
+    console.log(`Usuario ${usuario.id} navegó a ${ruta}`);
+    navigate(ruta);
+  };
 
   const handleLogout = () => {
     logout();
@@ -23,29 +20,38 @@ const Layout = () => {
   const rutasPermitidas = permisosPorRolId[usuario?.rolId] || [];
 
   return (
-    <div style={{ padding: '1rem' }}>
-      <h2>📋 Panel principal</h2>
-      <PerfilUsuario />
-      
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+    <div className="container py-4">
+      {/* Encabezado */}
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="text-primary">📋 Panel principal</h2>
+        <button onClick={handleLogout} className="btn btn-danger">
+          🔒 Cerrar sesión
+        </button>
+      </div>
+
+      {/* Perfil */}
+      <div className="mb-4">
+        <PerfilUsuario />
+      </div>
+
+      {/* Navegación por botones */}
+      <div className="d-flex flex-wrap gap-2 mb-4">
         {botonesPorRuta
           .filter(b => rutasPermitidas.includes(b.ruta))
           .map(b => (
-            <button key={b.ruta} onClick={() => handleNavigate(b.ruta)}>
+            <button
+              key={b.ruta}
+              className="btn btn-outline-primary"
+              onClick={() => handleNavigate(b.ruta)}
+            >
               {b.label}
             </button>
           ))}
       </div>
 
-      <div style={{ textAlign: 'right' }}>
-        <button onClick={handleLogout} style={{ backgroundColor: '#f44336', color: 'white' }}>
-          🔒 Cerrar sesión
-        </button>        
-      </div>
-
+      {/* Contenido dinámico */}
       <Outlet />
     </div>
-    
   );
 };
 

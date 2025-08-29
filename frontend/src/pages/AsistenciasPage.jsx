@@ -31,27 +31,31 @@ export default function AsistenciasPage() {
   }, []);
 
   if (!usuario) {
-    return <p>⏳ Cargando usuario...</p>;
+    return <div className="container py-4"><p className="text-muted">⏳ Cargando usuario...</p></div>;
   }
 
   if (!puedeVer) {
-    return <p>🚫 No tienes permisos para acceder a esta sección.</p>;
+    return <div className="container py-4"><p className="alert alert-danger">🚫 No tienes permisos para acceder a esta sección.</p></div>;
   }
 
   return (
-    <div>
-      <h2>🧑‍🏭 Asistencia</h2>
+    <div className="container py-4">
+      <h2 className="text-primary mb-4">🧑‍🏭 Registro de Asistencia</h2>
 
       {puedeRegistrar ? (
-        <RegistroAsistencia minaId={minaIdFinal} />
+        <div className="mb-4">
+          <RegistroAsistencia minaId={minaIdFinal} />
+        </div>
       ) : (
-        <p>Solo los usuarios con rol Administrador, Licenciado o Encargado de mina pueden registrar asistencia.</p>
+        <p className="alert alert-warning">
+          Solo los usuarios con rol Administrador, Licenciado o Encargado de mina pueden registrar asistencia.
+        </p>
       )}
 
       {esSupervisor && (
-        <div>
-          <label>Seleccionar mina:</label>
-          <select value={minaSeleccionada} onChange={e => setMinaSeleccionada(e.target.value)}>
+        <div className="mb-4">
+          <label className="form-label">Seleccionar mina:</label>
+          <select className="form-select" value={minaSeleccionada} onChange={e => setMinaSeleccionada(e.target.value)}>
             <option value="">-- Selecciona una mina --</option>
             {minas.map(mina => (
               <option key={mina.id} value={mina.id}>{mina.nombre}</option>
@@ -60,13 +64,12 @@ export default function AsistenciasPage() {
         </div>
       )}
 
-      <h1>Gestión de Asistencias</h1>
       <TablaAsistencias
-            minaId={minaIdFinal}
-            esSupervisor={esSupervisor}
-            token={token}
-            usuario={usuario}
-        />
+        minaId={minaIdFinal}
+        esSupervisor={esSupervisor}
+        token={token}
+        usuario={usuario}
+      />
     </div>
   );
 }
