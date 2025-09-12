@@ -61,7 +61,7 @@ function App() {
               <RutaPorRol><DiasTrabajadosPage /></RutaPorRol>
               } />
             <Route path="/pago" element={
-              <RutaPorRol></RutaPorRol>
+              <RutaPorRol><PagoPage /></RutaPorRol>
               } />
           </Route>
 
